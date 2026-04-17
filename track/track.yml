@@ -1,0 +1,30 @@
+slug: temporal-typescript-agents
+title: "Durable AI Agents with TypeScript and Temporal"
+teaser: Four demos showing how Temporal makes AI agents production-ready — from a raw agentic loop to human-in-the-loop with signals.
+description: |-
+  Watch a raw agentic loop become a durable, observable, fault-tolerant system — step by step.
+
+  - **Demo 1**: Raw while loop calling Claude with tools. Kill it mid-run and lose everything.
+  - **Demo 2**: Same loop inside a Temporal workflow. Restart the worker — the workflow resumes.
+  - **Demo 3**: Clean tool registry dispatch. Same durability, no if/else chain.
+  - **Demo 4**: Human in the loop. The agent pauses, asks a question via signal, and resumes.
+icon: https://storage.googleapis.com/instruqt-frontend/img/tracks/default.png
+tags:
+- temporal
+- typescript
+- ai-agents
+- anthropic
+owner: temporal
+developers:
+- marcus.merrell@temporal.io
+idle_timeout: 1800
+timelimit: 7200
+lab_config:
+  sidebar_enabled: true
+  feedback_recap_enabled: true
+  feedback_tab_enabled: true
+  loadingMessages: true
+  hideStopButton: false
+  default_layout: AssignmentLeft
+  default_layout_sidebar_size: 35
+enhanced_loading: false

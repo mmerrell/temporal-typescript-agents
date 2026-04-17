@@ -1,0 +1,150 @@
+/**
+ * activities.ts
+ *
+ * All Temporal activities. Each activity is a unit of I/O: an LLM call
+ * or an external API call.
+ *
+ * Activities have no knowledge of the agentic loop — that's intentional.
+ * The workflow owns the loop; activities own the side effects.
+ *
+ * All HTTP calls use native fetch, which respects HTTP_PROXY / HTTPS_PROXY
+ * environment variables — so the workshop proxy intercepts them automatically.
+ */
+
+import { activity } from "@temporalio/activity";
+import Anthropic from "@anthropic-ai/sdk";
+import { TOOLS } from "./tools";
+
+const SYSTEM_PROMPT =
+  "You are a helpful assistant that answers questions about weather alerts " +
+  "and distances between locations. Use your tools to look up real data. " +
+  "When you have enough information to fully answer, provide a clear plain-text response.";
+
+// ── LLM activity ──────────────────────────────────────────────────────────────
+
+/**
+ * Call Claude with the current conversation history and a tool list.
+ * Returns a plain object with content blocks and stop_reason.
+ *
+ * This is the only place in the system that touches the Anthropic API.
+ * Non-deterministic I/O stays outside the workflow.
+ *
+ * tools defaults to TOOLS. Demo 4 passes TOOLS_HITL instead.
+ */
+export async function callLLM(
+  messages: Anthropic.MessageParam[],
+  tools: Anthropic.Tool[] = TOOLS
+): Promise<{ content: Anthropic.ContentBlock[]; stopReason: string }> {
+  const ctx = activity.context();
+  ctx.log.info(`Calling Claude with ${messages.length} messages`);
+
+  const client = new Anthropic();
+  const response = await client.messages.create({
+    model: "claude-haiku-4-5",
+    max_tokens: 4096,
+    system: SYSTEM_PROMPT,
+    messages,
+    tools,
+  });
+
+  return {
+    content: response.content,
+    stopReason: response.stop_reason ?? "end_turn",
+  };
+}
+
+// ── Tool activities ───────────────────────────────────────────────────────────
+
+/**
+ * Fetch active weather alerts for a US state from the National Weather Service.
+ * Free API, no key required. Returns up to 5 alert summaries.
+ */
+export async function getWeatherAlerts(state: string): Promise<string> {
+  const ctx = activity.context();
+  ctx.log.info(`Fetching weather alerts for: ${state}`);
+
+  const url = `https://api.weather.gov/alerts/active?area=${state.toUpperCase()}`;
+  const resp = await fetch(url, {
+    headers: { "User-Agent": "temporal-typescript-agents" },
+  });
+  if (!resp.ok) {
+    throw new Error(`NWS API error: ${resp.status} ${resp.statusText}`);
+  }
+  const data = (await resp.json()) as {
+    features: Array<{ properties: { event?: string; headline?: string } }>;
+  };
+  const alerts = data.features ?? [];
+  if (alerts.length === 0) {
+    return `No active weather alerts for ${state}.`;
+  }
+  return alerts
+    .slice(0, 5)
+    .map(
+      (a) =>
+        `- ${a.properties.event ?? "Alert"}: ${a.properties.headline ?? "No details"}`
+    )
+    .join("\n");
+}
+
+/**
+ * Get latitude/longitude for a location using the Nominatim geocoding API.
+ * Free API, no key required. Requires a User-Agent header.
+ */
+export async function getCoordinates(
+  location: string
+): Promise<{ lat: number; lon: number; displayName: string }> {
+  const ctx = activity.context();
+  ctx.log.info(`Getting coordinates for: ${location}`);
+
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("q", location);
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "1");
+
+  const resp = await fetch(url.toString(), {
+    headers: { "User-Agent": "temporal-typescript-agents" },
+  });
+  if (!resp.ok) {
+    throw new Error(`Nominatim error: ${resp.status} ${resp.statusText}`);
+  }
+  const results = (await resp.json()) as Array<{
+    lat: string;
+    lon: string;
+    display_name: string;
+  }>;
+  if (results.length === 0) {
+    throw new Error(`Could not find coordinates for: ${location}`);
+  }
+  return {
+    lat: parseFloat(results[0].lat),
+    lon: parseFloat(results[0].lon),
+    displayName: results[0].display_name,
+  };
+}
+
+/**
+ * Calculate straight-line (haversine) distance between two lat/lon points.
+ * Pure computation — no external API call.
+ */
+export async function getDistanceKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): Promise<{ distanceKm: number; distanceMiles: number }> {
+  const ctx = activity.context();
+  ctx.log.info(`Calculating distance (${lat1},${lon1}) -> (${lat2},${lon2})`);
+
+  const R = 6371.0;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const distance = 2 * R * Math.asin(Math.sqrt(a));
+  return {
+    distanceKm: Math.round(distance * 100) / 100,
+    distanceMiles: Math.round(distance * 0.621371 * 100) / 100,
+  };
+}

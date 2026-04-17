@@ -1,0 +1,11 @@
+.env
+node_modules/
+dist/
+*.js.map
+
+# mitmproxy runtime state — not for committing
+proxy/state.json
+*.pem
+*.p12
+
+.DS_Store

@@ -1,0 +1,35 @@
+#!/bin/bash
+fail() { echo "FAIL: $1"; exit 1; }
+pass() { echo "PASS: $1"; }
+
+# Check API key is set
+if [ -z "$ANTHROPIC_API_KEY" ]; then
+    fail "ANTHROPIC_API_KEY is not set. Check the Instruqt environment variables panel."
+fi
+pass "ANTHROPIC_API_KEY is set"
+
+# Check Temporal server
+if ! temporal operator cluster health --address 127.0.0.1:7233 2>/dev/null | grep -q SERVING; then
+    fail "Temporal server is not healthy. Check: systemctl status temporal-server"
+fi
+pass "Temporal server is healthy"
+
+# Check Node.js
+if ! node --version 2>/dev/null | grep -q "v2[2-9]"; then
+    fail "Node.js 22+ is required"
+fi
+pass "Node.js version OK"
+
+# Check node_modules
+if [ ! -d "/workspace/workshop/agent/node_modules/@temporalio" ]; then
+    fail "npm dependencies not installed. Check: cd /workspace/workshop/agent && npm install"
+fi
+pass "npm dependencies present"
+
+# Check proxy control panel
+if ! curl -sf http://localhost:5000/health > /dev/null; then
+    fail "Network control panel is not running. Check: systemctl status workshop-controlpanel"
+fi
+pass "Network control panel is running"
+
+echo "Environment check complete."
