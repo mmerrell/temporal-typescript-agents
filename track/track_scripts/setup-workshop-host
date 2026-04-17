@@ -72,9 +72,8 @@ done
 
 # ─── Workshop repo ────────────────────────────────────────────────────────────
 git clone --branch main \
-    https://github.com/temporal-community/temporal-typescript-agents.git \
+    https://github.com/mmerrell/temporal-typescript-agents.git \
     /workspace/workshop
-# NOTE: update branch name and org once repo is published.
 
 cd /workspace/workshop/agent
 npm install
