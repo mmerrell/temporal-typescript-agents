@@ -79,7 +79,8 @@ cd /workspace/workshop/agent
 npm install
 
 # ─── mitmproxy + network control panel ────────────────────────────────────────
-python3 -m pip install --break-system-packages mitmproxy flask
+# --ignore-installed prevents conflicts with debian-managed packages (e.g. blinker)
+python3 -m pip install --break-system-packages --ignore-installed mitmproxy flask
 
 # Generate the mitmproxy CA cert
 mitmdump --listen-port 8889 --set block_global=false &
@@ -94,14 +95,12 @@ MITM_CA="/root/.mitmproxy/mitmproxy-ca-cert.pem"
 cp "$MITM_CA" /usr/local/share/ca-certificates/mitmproxy-ca.crt
 update-ca-certificates
 
-# Write the toggle addon and control panel from the repo's proxy/ directory
-# (already on disk via git clone — just link the state file location)
+# Copy proxy files from the cloned repo and rewrite paths to /workspace/proxy
 mkdir -p /workspace/proxy
 cp /workspace/workshop/proxy/toggle_addon.py /workspace/proxy/toggle_addon.py
 cp /workspace/workshop/proxy/controlpanel.py /workspace/proxy/controlpanel.py
 cp -r /workspace/workshop/proxy/static /workspace/proxy/static
 
-# Rewrite STATE_FILE and static folder paths to /workspace/proxy
 sed -i 's|/app/state.json|/workspace/proxy/state.json|g' /workspace/proxy/toggle_addon.py
 sed -i 's|/app/state.json|/workspace/proxy/state.json|g' /workspace/proxy/controlpanel.py
 sed -i 's|/app/static|/workspace/proxy/static|g' /workspace/proxy/controlpanel.py
