@@ -1,9 +1,10 @@
 ---
 slug: demo1-raw
-id:
+id: tsbkqc6n9o5p
 type: challenge
-title: "Demo 1: The Raw Agentic Loop"
-teaser: A plain TypeScript while loop calling Claude with tools. Kill it mid-run and watch everything disappear.
+title: 'Demo 1: The Raw Agentic Loop'
+teaser: A plain TypeScript while loop calling Claude with tools. Kill it mid-run and
+  watch everything disappear.
 notes:
 - type: text
   contents: |-
@@ -15,20 +16,24 @@ notes:
 
     This is the problem the rest of the demos solve.
 tabs:
-- title: Terminal 1
+- id: p0jonglwr2ak
+  title: Terminal 1
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/agent
-- title: Terminal 2
+- id: sn8rx2vzfifp
+  title: Terminal 2
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/agent
-- title: VS Code
+- id: iqinqi0zjxk7
+  title: VS Code
   type: service
   hostname: workshop-host
   path: ?folder=/workspace/workshop/agent&openFile=/workspace/workshop/agent/demo1-raw.ts
   port: 8443
-- title: Network Control Panel
+- id: zkf7a2stx1xi
+  title: Network Control Panel
   type: service
   hostname: workshop-host
   path: /

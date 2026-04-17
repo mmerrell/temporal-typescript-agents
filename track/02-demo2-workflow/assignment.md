@@ -1,9 +1,10 @@
 ---
 slug: demo2-workflow
-id:
+id: 4kity9z7ecxg
 type: challenge
-title: "Demo 2: The Agentic Loop as a Temporal Workflow"
-teaser: The same loop, now running inside Temporal. Restart the worker mid-run — the workflow resumes exactly where it left off.
+title: 'Demo 2: The Agentic Loop as a Temporal Workflow'
+teaser: The same loop, now running inside Temporal. Restart the worker mid-run — the
+  workflow resumes exactly where it left off.
 notes:
 - type: text
   contents: |-
@@ -15,25 +16,30 @@ notes:
 
     That's durability. You get it for free by wrapping the loop in a workflow.
 tabs:
-- title: Terminal 1 - Worker
+- id: lyx7txplh0jv
+  title: Terminal 1 - Worker
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/agent
-- title: Terminal 2 - Starter
+- id: vlv0yed95bzb
+  title: Terminal 2 - Starter
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/agent
-- title: VS Code
+- id: pvffswir8yop
+  title: VS Code
   type: service
   hostname: workshop-host
   path: ?folder=/workspace/workshop/agent&openFile=/workspace/workshop/agent/demo2-workflow.ts
   port: 8443
-- title: Temporal Web UI
+- id: etfqdaeycz4l
+  title: Temporal Web UI
   type: service
   hostname: workshop-host
   path: /
   port: 8080
-- title: Network Control Panel
+- id: zxhmvilhoiur
+  title: Network Control Panel
   type: service
   hostname: workshop-host
   path: /

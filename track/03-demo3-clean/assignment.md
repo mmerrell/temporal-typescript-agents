@@ -1,9 +1,10 @@
 ---
 slug: demo3-clean
-id:
+id: smlxyrjinyhk
 type: challenge
-title: "Demo 3: Clean Tool Dispatch"
-teaser: Same workflow, no if/else chain. A tool registry map makes adding new tools a one-liner — and sets up Demo 4 perfectly.
+title: 'Demo 3: Clean Tool Dispatch'
+teaser: Same workflow, no if/else chain. A tool registry map makes adding new tools
+  a one-liner — and sets up Demo 4 perfectly.
 notes:
 - type: text
   contents: |-
@@ -15,25 +16,30 @@ notes:
 
     Pay attention to how this sets up Demo 4: adding human-in-the-loop will be just one more entry in the registry.
 tabs:
-- title: Terminal 1 - Worker
+- id: jtvvsvmzrrac
+  title: Terminal 1 - Worker
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/agent
-- title: Terminal 2 - Starter
+- id: 0xjlemxn0h9o
+  title: Terminal 2 - Starter
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/agent
-- title: VS Code
+- id: tzs5vijj1lk4
+  title: VS Code
   type: service
   hostname: workshop-host
   path: ?folder=/workspace/workshop/agent&openFile=/workspace/workshop/agent/demo3-clean.ts
   port: 8443
-- title: Temporal Web UI
+- id: zteiuxb9zkil
+  title: Temporal Web UI
   type: service
   hostname: workshop-host
   path: /
   port: 8080
-- title: Network Control Panel
+- id: bpbywubgc19m
+  title: Network Control Panel
   type: service
   hostname: workshop-host
   path: /

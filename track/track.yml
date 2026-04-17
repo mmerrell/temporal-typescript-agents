@@ -1,6 +1,8 @@
 slug: temporal-typescript-agents
-title: "Durable AI Agents with TypeScript and Temporal"
-teaser: Four demos showing how Temporal makes AI agents production-ready — from a raw agentic loop to human-in-the-loop with signals.
+id: 4xncyp9hmayv
+title: Durable AI Agents with TypeScript and Temporal
+teaser: Four demos showing how Temporal makes AI agents production-ready — from a
+  raw agentic loop to human-in-the-loop with signals.
 description: |-
   Watch a raw agentic loop become a durable, observable, fault-tolerant system — step by step.
 
@@ -10,10 +12,10 @@ description: |-
   - **Demo 4**: Human in the loop. The agent pauses, asks a question via signal, and resumes.
 icon: https://storage.googleapis.com/instruqt-frontend/img/tracks/default.png
 tags:
+- anthropic
+- ai-agents
 - temporal
 - typescript
-- ai-agents
-- anthropic
 owner: temporal
 developers:
 - marcus.merrell@temporal.io
@@ -27,4 +29,5 @@ lab_config:
   hideStopButton: false
   default_layout: AssignmentLeft
   default_layout_sidebar_size: 35
+checksum: "11583845920890992372"
 enhanced_loading: false

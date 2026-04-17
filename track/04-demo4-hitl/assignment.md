@@ -1,9 +1,10 @@
 ---
 slug: demo4-hitl
-id:
+id: zv2ryuvzzuw4
 type: challenge
-title: "Demo 4: Human in the Loop"
-teaser: The agent pauses mid-execution to ask a question. While it waits, the workflow is durably suspended — no threads, no polling, zero resources consumed.
+title: 'Demo 4: Human in the Loop'
+teaser: The agent pauses mid-execution to ask a question. While it waits, the workflow
+  is durably suspended — no threads, no polling, zero resources consumed.
 notes:
 - type: text
   contents: |-
@@ -18,25 +19,30 @@ notes:
 
     The ask_user handler in the tool registry is just one function. The rest of the workflow is unchanged.
 tabs:
-- title: Terminal 1 - Worker
+- id: kcakhi7xnxh9
+  title: Terminal 1 - Worker
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/agent
-- title: Terminal 2 - Starter
+- id: nitjgnm39xgh
+  title: Terminal 2 - Starter
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/agent
-- title: VS Code
+- id: 1uyvwmvu5zp0
+  title: VS Code
   type: service
   hostname: workshop-host
   path: ?folder=/workspace/workshop/agent&openFile=/workspace/workshop/agent/demo4-hitl.ts
   port: 8443
-- title: Temporal Web UI
+- id: ptwxqfbzpvol
+  title: Temporal Web UI
   type: service
   hostname: workshop-host
   path: /
   port: 8080
-- title: Network Control Panel
+- id: qhyedcbteyej
+  title: Network Control Panel
   type: service
   hostname: workshop-host
   path: /
