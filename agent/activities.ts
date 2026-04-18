@@ -7,14 +7,15 @@
  * Activities have no knowledge of the agentic loop — that's intentional.
  * The workflow owns the loop; activities own the side effects.
  *
- * HTTP_PROXY / HTTPS_PROXY are respected via https-proxy-agent, which is
- * passed explicitly to both the Anthropic SDK client and native fetch calls.
- * This is necessary because node-fetch (used by the Anthropic SDK) and
- * Node's native fetch (undici) do not respect proxy env vars automatically.
+ * The Anthropic SDK uses node-fetch with its own KeepAliveAgent which
+ * overrides any agent passed via fetchOptions. We instead pass a custom
+ * fetch function that injects the proxy agent directly, bypassing the
+ * SDK's default agent entirely.
  */
 
 import { Context } from "@temporalio/activity";
 import Anthropic from "@anthropic-ai/sdk";
+import nodeFetch from "node-fetch";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { TOOLS } from "./tools";
 
@@ -23,10 +24,14 @@ const SYSTEM_PROMPT =
   "and distances between locations. Use your tools to look up real data. " +
   "When you have enough information to fully answer, provide a clear plain-text response.";
 
-// Build a proxy agent if HTTP_PROXY or HTTPS_PROXY is set, otherwise undefined.
-// When undefined, all clients fall back to direct connections (local dev without Docker).
 const proxyUrl = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
 const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
+
+// Custom fetch that routes through the proxy by injecting the agent directly.
+// This bypasses the SDK's own KeepAliveAgent which would otherwise take precedence.
+const proxiedFetch: Anthropic.Fetch = proxyAgent
+  ? (url, init) => nodeFetch(url as string, { ...init, agent: proxyAgent } as Parameters<typeof nodeFetch>[1])
+  : (url, init) => nodeFetch(url as string, init as Parameters<typeof nodeFetch>[1]);
 
 // ── LLM activity ──────────────────────────────────────────────────────────────
 
@@ -36,11 +41,7 @@ export async function callLLM(
 ): Promise<{ content: Anthropic.ContentBlock[]; stopReason: string }> {
   Context.current().log.info(`Calling Claude with ${messages.length} messages`);
 
-  // Pass the proxy agent to the Anthropic SDK via fetchOptions.
-  // The SDK forwards fetchOptions to node-fetch on Node.js.
-  const client = new Anthropic({
-    ...(proxyAgent ? { fetchOptions: { agent: proxyAgent } } : {}),
-  });
+  const client = new Anthropic({ fetch: proxiedFetch });
 
   const response = await client.messages.create({
     model: "claude-haiku-4-5",
@@ -58,8 +59,7 @@ export async function callLLM(
 
 // ── Tool activities ───────────────────────────────────────────────────────────
 
-// Shared fetch options for tool activities — routes through proxy when set.
-function fetchOptions(): RequestInit {
+function fetchInit(): RequestInit {
   return proxyAgent ? ({ agent: proxyAgent } as RequestInit) : {};
 }
 
@@ -68,7 +68,7 @@ export async function getWeatherAlerts(state: string): Promise<string> {
 
   const url = `https://api.weather.gov/alerts/active?area=${state.toUpperCase()}`;
   const resp = await fetch(url, {
-    ...fetchOptions(),
+    ...fetchInit(),
     headers: { "User-Agent": "temporal-typescript-agents" },
   });
   if (!resp.ok) {
@@ -101,7 +101,7 @@ export async function getCoordinates(
   url.searchParams.set("limit", "1");
 
   const resp = await fetch(url.toString(), {
-    ...fetchOptions(),
+    ...fetchInit(),
     headers: { "User-Agent": "temporal-typescript-agents" },
   });
   if (!resp.ok) {
