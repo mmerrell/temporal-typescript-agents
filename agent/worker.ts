@@ -8,16 +8,16 @@
  * The worker connects to Temporal at TEMPORAL_ADDRESS (default 127.0.0.1:7233).
  */
 
-import { Worker } from "@temporalio/worker";
+import { Worker, NativeConnection } from "@temporalio/worker";
 import * as activities from "./activities";
-import path from "path";
 
 async function main() {
   const temporalAddress = process.env.TEMPORAL_ADDRESS ?? "127.0.0.1:7233";
-  const agentDir = path.resolve(__dirname);
+
+  const connection = await NativeConnection.connect({ address: temporalAddress });
 
   const worker = await Worker.create({
-    connection: { address: temporalAddress },
+    connection,
     taskQueue: "agent-task-queue",
     workflowsPath: require.resolve("./index"),
     activities,
