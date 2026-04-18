@@ -1,0 +1,26 @@
+{
+  "name": "exercise-4-hitl",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "worker": "npx ts-node exercise/worker.ts",
+    "starter": "npx ts-node exercise/starter.ts",
+    "worker:solution": "npx ts-node solution/worker.ts",
+    "starter:solution": "npx ts-node solution/starter.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@temporalio/activity": "^1.11.0",
+    "@temporalio/client": "^1.11.0",
+    "@temporalio/worker": "^1.11.0",
+    "@temporalio/workflow": "^1.11.0",
+    "https-proxy-agent": "^7.0.0",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/node-fetch": "^2.6.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}
