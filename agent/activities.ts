@@ -7,18 +7,26 @@
  * Activities have no knowledge of the agentic loop — that's intentional.
  * The workflow owns the loop; activities own the side effects.
  *
- * All HTTP calls use native fetch, which respects HTTP_PROXY / HTTPS_PROXY
- * environment variables — so the workshop proxy intercepts them automatically.
+ * HTTP_PROXY / HTTPS_PROXY are respected via https-proxy-agent, which is
+ * passed explicitly to both the Anthropic SDK client and native fetch calls.
+ * This is necessary because node-fetch (used by the Anthropic SDK) and
+ * Node's native fetch (undici) do not respect proxy env vars automatically.
  */
 
 import { Context } from "@temporalio/activity";
 import Anthropic from "@anthropic-ai/sdk";
+import { HttpsProxyAgent } from "https-proxy-agent";
 import { TOOLS } from "./tools";
 
 const SYSTEM_PROMPT =
   "You are a helpful assistant that answers questions about weather alerts " +
   "and distances between locations. Use your tools to look up real data. " +
   "When you have enough information to fully answer, provide a clear plain-text response.";
+
+// Build a proxy agent if HTTP_PROXY or HTTPS_PROXY is set, otherwise undefined.
+// When undefined, all clients fall back to direct connections (local dev without Docker).
+const proxyUrl = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
+const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
 
 // ── LLM activity ──────────────────────────────────────────────────────────────
 
@@ -28,7 +36,12 @@ export async function callLLM(
 ): Promise<{ content: Anthropic.ContentBlock[]; stopReason: string }> {
   Context.current().log.info(`Calling Claude with ${messages.length} messages`);
 
-  const client = new Anthropic();
+  // Pass the proxy agent to the Anthropic SDK via fetchOptions.
+  // The SDK forwards fetchOptions to node-fetch on Node.js.
+  const client = new Anthropic({
+    ...(proxyAgent ? { fetchOptions: { agent: proxyAgent } } : {}),
+  });
+
   const response = await client.messages.create({
     model: "claude-haiku-4-5",
     max_tokens: 4096,
@@ -45,11 +58,17 @@ export async function callLLM(
 
 // ── Tool activities ───────────────────────────────────────────────────────────
 
+// Shared fetch options for tool activities — routes through proxy when set.
+function fetchOptions(): RequestInit {
+  return proxyAgent ? ({ agent: proxyAgent } as RequestInit) : {};
+}
+
 export async function getWeatherAlerts(state: string): Promise<string> {
   Context.current().log.info(`Fetching weather alerts for: ${state}`);
 
   const url = `https://api.weather.gov/alerts/active?area=${state.toUpperCase()}`;
   const resp = await fetch(url, {
+    ...fetchOptions(),
     headers: { "User-Agent": "temporal-typescript-agents" },
   });
   if (!resp.ok) {
@@ -82,6 +101,7 @@ export async function getCoordinates(
   url.searchParams.set("limit", "1");
 
   const resp = await fetch(url.toString(), {
+    ...fetchOptions(),
     headers: { "User-Agent": "temporal-typescript-agents" },
   });
   if (!resp.ok) {

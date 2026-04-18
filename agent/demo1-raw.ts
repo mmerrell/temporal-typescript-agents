@@ -13,6 +13,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import { HttpsProxyAgent } from "https-proxy-agent";
 import { TOOLS } from "./tools";
 
 const SYSTEM_PROMPT =
@@ -20,11 +21,19 @@ const SYSTEM_PROMPT =
   "and distances between locations. Use your tools to look up real data. " +
   "When you have enough information to fully answer, provide a clear plain-text response.";
 
-// ── Tool implementations (inline — no Temporal, no activity registry) ─────────
+const proxyUrl = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
+const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
+
+function fetchOptions(): RequestInit {
+  return proxyAgent ? ({ agent: proxyAgent } as RequestInit) : {};
+}
+
+// ── Tool implementations ───────────────────────────────────────────────────────
 
 async function getWeatherAlerts(state: string): Promise<string> {
   const url = `https://api.weather.gov/alerts/active?area=${state.toUpperCase()}`;
   const resp = await fetch(url, {
+    ...fetchOptions(),
     headers: { "User-Agent": "temporal-typescript-agents" },
   });
   if (!resp.ok) throw new Error(`NWS error: ${resp.status}`);
@@ -47,6 +56,7 @@ async function getCoordinates(
   url.searchParams.set("format", "json");
   url.searchParams.set("limit", "1");
   const resp = await fetch(url.toString(), {
+    ...fetchOptions(),
     headers: { "User-Agent": "temporal-typescript-agents" },
   });
   if (!resp.ok) throw new Error(`Nominatim error: ${resp.status}`);
@@ -76,22 +86,9 @@ function getDistanceKm(
 }
 
 async function runTool(name: string, input: Record<string, unknown>): Promise<string> {
-  if (name === "get_weather_alerts") {
-    return getWeatherAlerts(input.state as string);
-  }
-  if (name === "get_coordinates") {
-    const result = await getCoordinates(input.location as string);
-    return JSON.stringify(result);
-  }
-  if (name === "get_distance_km") {
-    const result = getDistanceKm(
-      input.lat1 as number,
-      input.lon1 as number,
-      input.lat2 as number,
-      input.lon2 as number
-    );
-    return JSON.stringify(result);
-  }
+  if (name === "get_weather_alerts") return getWeatherAlerts(input.state as string);
+  if (name === "get_coordinates") return JSON.stringify(await getCoordinates(input.location as string));
+  if (name === "get_distance_km") return JSON.stringify(getDistanceKm(input.lat1 as number, input.lon1 as number, input.lat2 as number, input.lon2 as number));
   return `Unknown tool: ${name}`;
 }
 
@@ -99,7 +96,9 @@ async function runTool(name: string, input: Record<string, unknown>): Promise<st
 
 async function main(query: string): Promise<void> {
   console.log(`\nQuery: ${query}\n`);
-  const client = new Anthropic();
+  const client = new Anthropic({
+    ...(proxyAgent ? { fetchOptions: { agent: proxyAgent } } : {}),
+  });
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: query }];
   let iteration = 0;
 
@@ -134,11 +133,7 @@ async function main(query: string): Promise<void> {
           console.log(`  -> Calling tool: ${block.name}(${JSON.stringify(block.input)})`);
           const result = await runTool(block.name, block.input as Record<string, unknown>);
           console.log(`  <- Result: ${result.slice(0, 100)}...`);
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: block.id,
-            content: result,
-          });
+          toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
         }
       }
       messages.push({ role: "user", content: toolResults });
