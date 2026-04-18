@@ -28,10 +28,6 @@ import {
 import type * as acts from "./activities";
 import type Anthropic from "@anthropic-ai/sdk";
 
-// TOOLS_HITL is defined here rather than imported from tools.ts.
-// Workflow code runs in the Temporal sandbox and cannot safely import
-// from non-workflow modules at runtime. Defining the tool list inline
-// is the established pattern (mirrors python-agent-demo's TOOLS_WITH_HITL).
 const TOOLS_HITL: Anthropic.Tool[] = [
   {
     name: "get_weather_alerts",
@@ -88,13 +84,9 @@ const TOOLS_HITL: Anthropic.Tool[] = [
   },
 ];
 
-// ── Signals & queries ─────────────────────────────────────────────────────────
-
 export const provideUserInputSignal = defineSignal<[string]>("provide_user_input");
 export const getPendingQuestionQuery = defineQuery<string | null>("get_pending_question");
 export const isInputNeededQuery = defineQuery<boolean>("is_input_needed");
-
-// ── Workflow ──────────────────────────────────────────────────────────────────
 
 export async function weatherAgentHITLWorkflow(query: string): Promise<string> {
   let pendingQuestion: string | null = null;
@@ -115,7 +107,6 @@ export async function weatherAgentHITLWorkflow(query: string): Promise<string> {
 
   const { callLLM } = proxyActivities<typeof acts>({
     startToCloseTimeout: "60 seconds",
-    retry: { maximumAttempts: 1 },
   });
 
   type ToolHandler = (input: Record<string, unknown>) => Promise<string>;
@@ -139,9 +130,6 @@ export async function weatherAgentHITLWorkflow(query: string): Promise<string> {
       return JSON.stringify(dist);
     },
 
-    // Durable suspend: set the question, wait for a signal.
-    // No threads consumed while waiting. If the worker restarts,
-    // replay resumes here and waits again.
     ask_user: async (input) => {
       pendingQuestion = input.question as string;
       userInput = null;
@@ -157,7 +145,6 @@ export async function weatherAgentHITLWorkflow(query: string): Promise<string> {
   ];
 
   while (true) {
-    // Pass TOOLS_HITL so Claude knows it can use ask_user.
     const { content, stopReason } = await callLLM(
       messages as Parameters<typeof acts.callLLM>[0],
       TOOLS_HITL

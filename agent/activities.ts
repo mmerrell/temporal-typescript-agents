@@ -7,10 +7,15 @@
  * Activities have no knowledge of the agentic loop — that's intentional.
  * The workflow owns the loop; activities own the side effects.
  *
- * The Anthropic SDK uses node-fetch with its own KeepAliveAgent which
- * overrides any agent passed via fetchOptions. We instead pass a custom
- * fetch function that injects the proxy agent directly, bypassing the
- * SDK's default agent entirely.
+ * The Anthropic SDK's internal retries are disabled (maxRetries: 0) so that
+ * Temporal owns all retry logic. Having retries in two places causes them to
+ * fight each other — the SDK retries silently before Temporal ever sees the
+ * failure, making Temporal's retry visibility and backoff meaningless.
+ *
+ * The SDK uses node-fetch with its own KeepAliveAgent which overrides any
+ * agent passed via fetchOptions. We pass a custom fetch function instead,
+ * injecting https-proxy-agent directly so the workshop proxy can intercept
+ * and toggle traffic mid-demo.
  */
 
 import { Context } from "@temporalio/activity";
@@ -41,7 +46,12 @@ export async function callLLM(
 ): Promise<{ content: Anthropic.ContentBlock[]; stopReason: string }> {
   Context.current().log.info(`Calling Claude with ${messages.length} messages`);
 
-  const client = new Anthropic({ fetch: proxiedFetch });
+  const client = new Anthropic({
+    fetch: proxiedFetch,
+    // Disable SDK-internal retries — Temporal owns all retry logic.
+    // Having retries in two places causes them to fight each other.
+    maxRetries: 0,
+  });
 
   const response = await client.messages.create({
     model: "claude-haiku-4-5",

@@ -16,17 +16,18 @@
 import { proxyActivities } from "@temporalio/workflow";
 import type * as acts from "./activities";
 
-// Tool activities — retryable, 30s timeout
+// Tool activities — retryable with default retry policy, 30s timeout each.
 const { getWeatherAlerts, getCoordinates, getDistanceKm } =
   proxyActivities<typeof acts>({
     startToCloseTimeout: "30 seconds",
   });
 
-// LLM activity — retries disabled: a failed LLM call gives a different response,
-// which would violate deterministic replay.
+// LLM activity — also retryable. A 503 or network error means the activity
+// failed before writing anything to history, so retrying is safe. Only a
+// *successful* LLM response should never be replayed — and Temporal only
+// retries failed activities, not completed ones.
 const { callLLM } = proxyActivities<typeof acts>({
   startToCloseTimeout: "60 seconds",
-  retry: { maximumAttempts: 1 },
 });
 
 export async function weatherAgentWorkflow(query: string): Promise<string> {
@@ -62,8 +63,6 @@ export async function weatherAgentWorkflow(query: string): Promise<string> {
         const inp = toolInput as Record<string, unknown>;
         let result: string;
 
-        // Each tool call is a separate activity — retryable, visible,
-        // timeout-protected.
         if (toolName === "get_weather_alerts") {
           result = await getWeatherAlerts(inp.state as string);
         } else if (toolName === "get_coordinates") {

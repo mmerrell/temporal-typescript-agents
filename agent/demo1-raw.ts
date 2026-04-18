@@ -13,6 +13,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import nodeFetch from "node-fetch";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { TOOLS } from "./tools";
 
@@ -23,6 +24,10 @@ const SYSTEM_PROMPT =
 
 const proxyUrl = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
 const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
+
+const proxiedFetch: Anthropic.Fetch = proxyAgent
+  ? (url, init) => nodeFetch(url as string, { ...init, agent: proxyAgent } as Parameters<typeof nodeFetch>[1])
+  : (url, init) => nodeFetch(url as string, init as Parameters<typeof nodeFetch>[1]);
 
 function fetchOptions(): RequestInit {
   return proxyAgent ? ({ agent: proxyAgent } as RequestInit) : {};
@@ -48,9 +53,7 @@ async function getWeatherAlerts(state: string): Promise<string> {
     .join("\n");
 }
 
-async function getCoordinates(
-  location: string
-): Promise<{ lat: number; lon: number }> {
+async function getCoordinates(location: string): Promise<{ lat: number; lon: number }> {
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", location);
   url.searchParams.set("format", "json");
@@ -66,10 +69,7 @@ async function getCoordinates(
 }
 
 function getDistanceKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
+  lat1: number, lon1: number, lat2: number, lon2: number
 ): { distanceKm: number; distanceMiles: number } {
   const R = 6371.0;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -97,7 +97,8 @@ async function runTool(name: string, input: Record<string, unknown>): Promise<st
 async function main(query: string): Promise<void> {
   console.log(`\nQuery: ${query}\n`);
   const client = new Anthropic({
-    ...(proxyAgent ? { fetchOptions: { agent: proxyAgent } } : {}),
+    fetch: proxiedFetch,
+    maxRetries: 0,  // no SDK retries — fail fast so the caller sees errors immediately
   });
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: query }];
   let iteration = 0;

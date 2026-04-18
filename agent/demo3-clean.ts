@@ -26,12 +26,8 @@ const { getWeatherAlerts, getCoordinates, getDistanceKm } =
 
 const { callLLM } = proxyActivities<typeof acts>({
   startToCloseTimeout: "60 seconds",
-  retry: { maximumAttempts: 1 },
 });
 
-// Tool registry: maps tool name → activity call (returns string result).
-// Each handler receives the raw input object and returns a string for the
-// tool_result block.
 type ToolHandler = (input: Record<string, unknown>) => Promise<string>;
 
 const toolHandlers: Record<string, ToolHandler> = {
