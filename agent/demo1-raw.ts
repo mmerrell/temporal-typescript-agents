@@ -25,22 +25,24 @@ const SYSTEM_PROMPT =
 const proxyUrl = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
 const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
 
-const proxiedFetch: Anthropic.Fetch = proxyAgent
-  ? (url, init) => nodeFetch(url as string, { ...init, agent: proxyAgent } as Parameters<typeof nodeFetch>[1])
-  : (url, init) => nodeFetch(url as string, init as Parameters<typeof nodeFetch>[1]);
-
-function fetchOptions(): RequestInit {
-  return proxyAgent ? ({ agent: proxyAgent } as RequestInit) : {};
+function nativeFetchOpts() {
+  return proxyAgent ? { agent: proxyAgent } : {};
 }
+
+const proxiedFetch: Anthropic.Fetch = (url, init) =>
+  nodeFetch(
+    url as string,
+    { ...init, ...nativeFetchOpts() } as Parameters<typeof nodeFetch>[1]
+  );
 
 // ── Tool implementations ───────────────────────────────────────────────────────
 
 async function getWeatherAlerts(state: string): Promise<string> {
   const url = `https://api.weather.gov/alerts/active?area=${state.toUpperCase()}`;
-  const resp = await fetch(url, {
-    ...fetchOptions(),
+  const resp = await nodeFetch(url, {
+    ...nativeFetchOpts(),
     headers: { "User-Agent": "temporal-typescript-agents" },
-  });
+  } as Parameters<typeof nodeFetch>[1]);
   if (!resp.ok) throw new Error(`NWS error: ${resp.status}`);
   const data = (await resp.json()) as {
     features: Array<{ properties: { event?: string; headline?: string } }>;
@@ -58,10 +60,10 @@ async function getCoordinates(location: string): Promise<{ lat: number; lon: num
   url.searchParams.set("q", location);
   url.searchParams.set("format", "json");
   url.searchParams.set("limit", "1");
-  const resp = await fetch(url.toString(), {
-    ...fetchOptions(),
+  const resp = await nodeFetch(url.toString(), {
+    ...nativeFetchOpts(),
     headers: { "User-Agent": "temporal-typescript-agents" },
-  });
+  } as Parameters<typeof nodeFetch>[1]);
   if (!resp.ok) throw new Error(`Nominatim error: ${resp.status}`);
   const results = (await resp.json()) as Array<{ lat: string; lon: string }>;
   if (results.length === 0) throw new Error(`Not found: ${location}`);
@@ -98,7 +100,7 @@ async function main(query: string): Promise<void> {
   console.log(`\nQuery: ${query}\n`);
   const client = new Anthropic({
     fetch: proxiedFetch,
-    maxRetries: 0,  // no SDK retries — fail fast so the caller sees errors immediately
+    maxRetries: 0,
   });
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: query }];
   let iteration = 0;

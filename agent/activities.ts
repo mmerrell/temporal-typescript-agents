@@ -7,15 +7,16 @@
  * Activities have no knowledge of the agentic loop — that's intentional.
  * The workflow owns the loop; activities own the side effects.
  *
- * The Anthropic SDK's internal retries are disabled (maxRetries: 0) so that
- * Temporal owns all retry logic. Having retries in two places causes them to
- * fight each other — the SDK retries silently before Temporal ever sees the
- * failure, making Temporal's retry visibility and backoff meaningless.
+ * The Anthropic SDK uses node-fetch with its own KeepAliveAgent which
+ * overrides any agent passed via fetchOptions. We pass a custom fetch
+ * function instead, injecting https-proxy-agent directly.
  *
- * The SDK uses node-fetch with its own KeepAliveAgent which overrides any
- * agent passed via fetchOptions. We pass a custom fetch function instead,
- * injecting https-proxy-agent directly so the workshop proxy can intercept
- * and toggle traffic mid-demo.
+ * Native fetch (undici) also does not support the agent option in RequestInit,
+ * so all outbound HTTP calls use node-fetch explicitly to ensure the proxy
+ * agent is respected for workshop traffic toggling.
+ *
+ * The Anthropic SDK's internal retries are disabled (maxRetries: 0) so that
+ * Temporal owns all retry logic.
  */
 
 import { Context } from "@temporalio/activity";
@@ -32,11 +33,19 @@ const SYSTEM_PROMPT =
 const proxyUrl = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
 const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
 
-// Custom fetch that routes through the proxy by injecting the agent directly.
-// This bypasses the SDK's own KeepAliveAgent which would otherwise take precedence.
-const proxiedFetch: Anthropic.Fetch = proxyAgent
-  ? (url, init) => nodeFetch(url as string, { ...init, agent: proxyAgent } as Parameters<typeof nodeFetch>[1])
-  : (url, init) => nodeFetch(url as string, init as Parameters<typeof nodeFetch>[1]);
+// Shared node-fetch options — injects the proxy agent when available.
+// Native fetch (undici) ignores the agent option, so we use node-fetch
+// for all outbound HTTP calls.
+function nativeFetchOpts() {
+  return proxyAgent ? { agent: proxyAgent } : {};
+}
+
+// Custom fetch for the Anthropic SDK — bypasses the SDK's own KeepAliveAgent.
+const proxiedFetch: Anthropic.Fetch = (url, init) =>
+  nodeFetch(
+    url as string,
+    { ...init, ...nativeFetchOpts() } as Parameters<typeof nodeFetch>[1]
+  );
 
 // ── LLM activity ──────────────────────────────────────────────────────────────
 
@@ -48,8 +57,6 @@ export async function callLLM(
 
   const client = new Anthropic({
     fetch: proxiedFetch,
-    // Disable SDK-internal retries — Temporal owns all retry logic.
-    // Having retries in two places causes them to fight each other.
     maxRetries: 0,
   });
 
@@ -69,18 +76,15 @@ export async function callLLM(
 
 // ── Tool activities ───────────────────────────────────────────────────────────
 
-function fetchInit(): RequestInit {
-  return proxyAgent ? ({ agent: proxyAgent } as RequestInit) : {};
-}
-
 export async function getWeatherAlerts(state: string): Promise<string> {
   Context.current().log.info(`Fetching weather alerts for: ${state}`);
 
   const url = `https://api.weather.gov/alerts/active?area=${state.toUpperCase()}`;
-  const resp = await fetch(url, {
-    ...fetchInit(),
+  const resp = await nodeFetch(url, {
+    ...nativeFetchOpts(),
     headers: { "User-Agent": "temporal-typescript-agents" },
-  });
+  } as Parameters<typeof nodeFetch>[1]);
+
   if (!resp.ok) {
     throw new Error(`NWS API error: ${resp.status} ${resp.statusText}`);
   }
@@ -110,10 +114,11 @@ export async function getCoordinates(
   url.searchParams.set("format", "json");
   url.searchParams.set("limit", "1");
 
-  const resp = await fetch(url.toString(), {
-    ...fetchInit(),
+  const resp = await nodeFetch(url.toString(), {
+    ...nativeFetchOpts(),
     headers: { "User-Agent": "temporal-typescript-agents" },
-  });
+  } as Parameters<typeof nodeFetch>[1]);
+
   if (!resp.ok) {
     throw new Error(`Nominatim error: ${resp.status} ${resp.statusText}`);
   }
