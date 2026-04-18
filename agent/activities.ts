@@ -25,22 +25,26 @@ import nodeFetch from "node-fetch";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { TOOLS } from "./tools";
 
-const SYSTEM_PROMPT =
+export const DEFAULT_SYSTEM_PROMPT =
   "You are a helpful assistant that answers questions about weather alerts " +
   "and distances between locations. Use your tools to look up real data. " +
+  "When you have enough information to fully answer, provide a clear plain-text response.";
+
+export const HITL_SYSTEM_PROMPT =
+  "You are a helpful assistant that answers questions about weather alerts " +
+  "and distances between locations. Use your tools to look up real data. " +
+  "IMPORTANT: When you need information from the user (such as their location or state), " +
+  "you MUST use the ask_user tool — do NOT ask questions in plain text. " +
+  "Only use ask_user when you genuinely need information you cannot infer. " +
   "When you have enough information to fully answer, provide a clear plain-text response.";
 
 const proxyUrl = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
 const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
 
-// Shared node-fetch options — injects the proxy agent when available.
-// Native fetch (undici) ignores the agent option, so we use node-fetch
-// for all outbound HTTP calls.
 function nativeFetchOpts() {
   return proxyAgent ? { agent: proxyAgent } : {};
 }
 
-// Custom fetch for the Anthropic SDK — bypasses the SDK's own KeepAliveAgent.
 const proxiedFetch: Anthropic.Fetch = (url, init) =>
   nodeFetch(
     url as string,
@@ -51,7 +55,8 @@ const proxiedFetch: Anthropic.Fetch = (url, init) =>
 
 export async function callLLM(
   messages: Anthropic.MessageParam[],
-  tools: Anthropic.Tool[] = TOOLS
+  tools: Anthropic.Tool[] = TOOLS,
+  systemPrompt: string = DEFAULT_SYSTEM_PROMPT
 ): Promise<{ content: Anthropic.ContentBlock[]; stopReason: string }> {
   Context.current().log.info(`Calling Claude with ${messages.length} messages`);
 
@@ -63,7 +68,7 @@ export async function callLLM(
   const response = await client.messages.create({
     model: "claude-haiku-4-5",
     max_tokens: 4096,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     messages,
     tools,
   });

@@ -28,6 +28,17 @@ import {
 import type * as acts from "./activities";
 import type Anthropic from "@anthropic-ai/sdk";
 
+// System prompt for the HITL demo — instructs Claude to use the ask_user
+// tool rather than asking questions in plain text.
+const HITL_SYSTEM_PROMPT =
+  "You are a helpful assistant that answers questions about weather alerts " +
+  "and distances between locations. Use your tools to look up real data. " +
+  "IMPORTANT: When you need information from the user (such as their location or state), " +
+  "you MUST use the ask_user tool — do NOT ask questions in plain text. " +
+  "Only use ask_user when you genuinely need information you cannot infer. " +
+  "When you have enough information to fully answer, provide a clear plain-text response.";
+
+// TOOLS_HITL defined inline — workflow sandbox cannot import from non-workflow modules.
 const TOOLS_HITL: Anthropic.Tool[] = [
   {
     name: "get_weather_alerts",
@@ -71,9 +82,8 @@ const TOOLS_HITL: Anthropic.Tool[] = [
   {
     name: "ask_user",
     description:
-      "Ask the user a clarifying question when the request is ambiguous " +
-      "or you need more information to complete the task. " +
-      "Use this when you genuinely need input — not as a default.",
+      "Ask the user a clarifying question when you need information to complete the task. " +
+      "Use this tool whenever you need to ask the user anything — do NOT ask questions in plain text.",
     input_schema: {
       type: "object",
       properties: {
@@ -147,7 +157,8 @@ export async function weatherAgentHITLWorkflow(query: string): Promise<string> {
   while (true) {
     const { content, stopReason } = await callLLM(
       messages as Parameters<typeof acts.callLLM>[0],
-      TOOLS_HITL
+      TOOLS_HITL,
+      HITL_SYSTEM_PROMPT
     );
 
     messages.push({ role: "assistant", content });
