@@ -15,6 +15,17 @@ notes:
     Kill it mid-run and you lose everything — Claude's reasoning, the tool results, the intermediate state. It starts over from zero.
 
     This is the problem the rest of the demos solve.
+- type: text
+  contents: |-
+    **Before you start:** make sure your Anthropic API key is set in Terminal 1.
+
+    ```
+    export ANTHROPIC_API_KEY=sk-ant-...
+    ```
+
+    You can arrow-up to re-run this command in any later demo.
+
+    **Note:** This workshop uses the Anthropic API directly — Claude.ai and Claude Desktop subscription credits are a separate billing system and won't work here. You need API credits from platform.anthropic.com.
 tabs:
 - id: p0jonglwr2ak
   title: Terminal 1

@@ -222,6 +222,10 @@ export NO_PROXY="127.0.0.1,localhost"
 # Node.js does not use the system truststore — must be set explicitly
 export NODE_EXTRA_CA_CERTS="/root/.mitmproxy/mitmproxy-ca-cert.pem"
 
+# Suppress Node.js internal deprecation warnings (e.g. punycode) that appear
+# in ts-node output and distract from the workshop demos.
+export NODE_OPTIONS="--no-deprecation"
+
 # ANTHROPIC_API_KEY is injected by Instruqt from the participant environment variable.
 # If running locally: export ANTHROPIC_API_KEY=sk-ant-...
 
@@ -234,5 +238,6 @@ export HTTP_PROXY="http://127.0.0.1:8888"
 export HTTPS_PROXY="http://127.0.0.1:8888"
 export NO_PROXY="127.0.0.1,localhost"
 export NODE_EXTRA_CA_CERTS="/root/.mitmproxy/mitmproxy-ca-cert.pem"
+export NODE_OPTIONS="--no-deprecation"
 
 echo "Track setup complete."

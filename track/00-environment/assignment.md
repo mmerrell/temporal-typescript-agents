@@ -3,7 +3,7 @@ slug: environment
 id:
 type: challenge
 title: "Welcome: Check Your Environment"
-teaser: Verify your API key, confirm services are running, and get oriented.
+teaser: Set your Anthropic API key, verify services are running, and get oriented.
 notes:
 - type: text
   contents: |-
@@ -36,15 +36,21 @@ enhanced_loading: null
 
 Let's confirm everything is ready before starting the demos.
 
-### Set your API key
+### Set your Anthropic API key
 
-Instruqt injects your Anthropic API key automatically. Verify it's available:
+Export your key in the terminal. You can arrow-up to re-run this in any later demo if needed:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Verify it's set:
 
 ```bash
 echo $ANTHROPIC_API_KEY
 ```
 
-You should see a value starting with `sk-ant-`. If it's empty, let your instructor know.
+You should see your key starting with `sk-ant-`.
 
 ### Check Node.js
 
@@ -65,7 +71,7 @@ You should see `SERVING`.
 ### Check the worker dependencies
 
 ```bash
-ls /workspace/workshop/agent/node_modules/@temporalio
+ls node_modules/@temporalio
 ```
 
 You should see `activity`, `client`, `worker`, `workflow`.
@@ -76,6 +82,6 @@ Click the **Network Control Panel** tab above. You should see three toggles — 
 
 ### Open the Temporal Web UI
 
-Click the **Temporal Web UI** tab. You should see the Temporal UI with no workflows yet. That's expected — nothing has run yet.
+Click the **Temporal Web UI** tab. You should see the Temporal UI with no workflows yet. That's expected.
 
 Click **Check** when everything looks good.

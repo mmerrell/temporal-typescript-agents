@@ -4,7 +4,7 @@ pass() { echo "PASS: $1"; }
 
 # Check API key is set
 if [ -z "$ANTHROPIC_API_KEY" ]; then
-    fail "ANTHROPIC_API_KEY is not set. Check the Instruqt environment variables panel."
+    fail "ANTHROPIC_API_KEY is not set. Run: export ANTHROPIC_API_KEY=sk-ant-..."
 fi
 pass "ANTHROPIC_API_KEY is set"
 
