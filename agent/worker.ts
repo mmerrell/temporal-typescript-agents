@@ -14,12 +14,12 @@ import path from "path";
 
 async function main() {
   const temporalAddress = process.env.TEMPORAL_ADDRESS ?? "127.0.0.1:7233";
+  const agentDir = path.resolve(__dirname);
 
   const worker = await Worker.create({
     connection: { address: temporalAddress },
     taskQueue: "agent-task-queue",
-    // The bundler looks for index.ts in this directory as the entry point.
-    workflowsPath: path.resolve(__dirname),
+    workflowsPath: require.resolve("./index"),
     activities,
   });
 
