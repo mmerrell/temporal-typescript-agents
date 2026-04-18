@@ -2,6 +2,7 @@
   "name": "temporal-typescript-agents",
   "version": "1.0.0",
   "private": true,
+  "main": "index.js",
   "scripts": {
     "worker": "npx ts-node worker.ts",
     "demo1": "npx ts-node demo1-raw.ts",
