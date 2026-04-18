@@ -4,7 +4,7 @@
  *   npx ts-node starter3.ts "What are the weather alerts in Texas?"
  */
 
-import { Client } from "@temporalio/client";
+import { Client, Connection } from "@temporalio/client";
 import { weatherAgentCleanWorkflow } from "./demo3-clean";
 
 async function main() {
@@ -13,9 +13,11 @@ async function main() {
       ? process.argv.slice(2).join(" ")
       : "What are the active weather alerts in California?";
 
-  const client = new Client({
-    connection: { address: process.env.TEMPORAL_ADDRESS ?? "127.0.0.1:7233" },
+  const connection = await Connection.connect({
+    address: process.env.TEMPORAL_ADDRESS ?? "127.0.0.1:7233",
   });
+
+  const client = new Client({ connection });
 
   const workflowId = `weather-agent-clean-${Date.now()}`;
   console.log(`Starting workflow: ${workflowId}`);

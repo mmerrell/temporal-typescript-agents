@@ -8,14 +8,13 @@
  * Your answer is sent as a signal, and the workflow resumes.
  */
 
-import { Client } from "@temporalio/client";
+import { Client, Connection } from "@temporalio/client";
 import * as readline from "readline";
 import {
   weatherAgentHITLWorkflow,
   provideUserInputSignal,
   getPendingQuestionQuery,
 } from "./demo4-hitl";
-import { TOOLS_HITL } from "./tools";
 
 async function promptUser(question: string): Promise<string> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -33,24 +32,23 @@ async function main() {
       ? process.argv.slice(2).join(" ")
       : "Should I worry about weather near me?";
 
-  const client = new Client({
-    connection: { address: process.env.TEMPORAL_ADDRESS ?? "127.0.0.1:7233" },
+  const connection = await Connection.connect({
+    address: process.env.TEMPORAL_ADDRESS ?? "127.0.0.1:7233",
   });
+
+  const client = new Client({ connection });
 
   const workflowId = `weather-agent-hitl-${Date.now()}`;
   console.log(`Starting HITL workflow: ${workflowId}`);
   console.log(`Query: ${query}\n`);
   console.log(`Workflow running. Watch it at http://localhost:8080`);
 
-  // Start the workflow but don't await the result yet — we need to
-  // handle signals while it runs.
   const handle = await client.workflow.start(weatherAgentHITLWorkflow, {
     taskQueue: "agent-task-queue",
     workflowId,
     args: [query],
   });
 
-  // Poll for pending questions
   const resultPromise = handle.result();
   let done = false;
   resultPromise.then(() => { done = true; }).catch(() => { done = true; });
@@ -66,7 +64,6 @@ async function main() {
         await handle.signal(provideUserInputSignal, answer);
       }
     } catch {
-      // Workflow may have completed — exit the poll loop
       break;
     }
   }
