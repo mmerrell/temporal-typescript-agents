@@ -1,0 +1,30 @@
+slug: temporal-typescript-agents-workshop
+title: "Durable AI Agents with TypeScript and Temporal: Hands-On Exercises"
+teaser: Four exercises that progressively build a durable AI agent — from wrapping a raw loop in Temporal to human-in-the-loop with signals.
+description: |-
+  Build a durable AI agent step by step, in TypeScript.
+
+  - **Exercise 1**: Wrap the raw agentic loop in a Temporal workflow — make callLLM an activity.
+  - **Exercise 2**: Extract tool calls as activities — visibility and retries per tool call.
+  - **Exercise 3**: Replace if/else dispatch with a tool registry map — adding a tool becomes one line.
+  - **Exercise 4**: Add human-in-the-loop — signals, queries, and durable suspension with condition().
+icon: https://storage.googleapis.com/instruqt-frontend/img/tracks/default.png
+tags:
+- anthropic
+- ai-agents
+- temporal
+- typescript
+owner: temporal
+developers:
+- marcus.merrell@temporal.io
+idle_timeout: 1800
+timelimit: 10800
+lab_config:
+  sidebar_enabled: true
+  feedback_recap_enabled: true
+  feedback_tab_enabled: true
+  loadingMessages: true
+  hideStopButton: false
+  default_layout: AssignmentLeft
+  default_layout_sidebar_size: 35
+enhanced_loading: false

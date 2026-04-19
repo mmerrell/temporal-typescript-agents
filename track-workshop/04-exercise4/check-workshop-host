@@ -1,0 +1,48 @@
+#!/bin/bash
+fail() { echo "FAIL: $1"; exit 1; }
+pass() { echo "PASS: $1"; }
+
+WORKFLOW_FILE="/workspace/workshop/exercises/4_hitl/exercise/workflow.ts"
+
+# Check defineSignal is present
+if ! grep -q "defineSignal" "$WORKFLOW_FILE"; then
+    fail "defineSignal not found in workflow.ts — complete Step 2"
+fi
+pass "defineSignal found"
+
+# Check defineQuery is present
+if ! grep -q "defineQuery" "$WORKFLOW_FILE"; then
+    fail "defineQuery not found in workflow.ts — complete Step 2"
+fi
+pass "defineQuery found"
+
+# Check condition() is present (the durable suspend)
+if ! grep -q "condition(" "$WORKFLOW_FILE"; then
+    fail "condition() not found in workflow.ts — complete Step 5 (ask_user handler)"
+fi
+pass "condition() found (durable suspend)"
+
+# Check setHandler is present
+if ! grep -q "setHandler" "$WORKFLOW_FILE"; then
+    fail "setHandler not found in workflow.ts — complete Step 4"
+fi
+pass "setHandler registered"
+
+# Check ask_user is in toolHandlers
+if ! grep -q "ask_user" "$WORKFLOW_FILE"; then
+    fail "ask_user handler not found in toolHandlers — complete Step 5"
+fi
+pass "ask_user handler found in toolHandlers"
+
+# Check at least one weatherAgentHITLWorkflow completed
+COMPLETED=$(temporal workflow list \
+    --address 127.0.0.1:7233 \
+    --query 'WorkflowType="weatherAgentHITLWorkflow" AND ExecutionStatus="Completed"' \
+    2>/dev/null | grep -c "Completed" || true)
+
+if [ "$COMPLETED" -lt 1 ]; then
+    fail "No completed weatherAgentHITLWorkflow found. Run the worker and starter, answer the question, then try again."
+fi
+pass "At least one weatherAgentHITLWorkflow completed"
+
+echo "Exercise 4 complete. Workshop finished."

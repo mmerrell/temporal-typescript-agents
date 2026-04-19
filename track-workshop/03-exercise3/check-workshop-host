@@ -1,0 +1,36 @@
+#!/bin/bash
+fail() { echo "FAIL: $1"; exit 1; }
+pass() { echo "PASS: $1"; }
+
+WORKFLOW_FILE="/workspace/workshop/exercises/3_clean_dispatch/exercise/workflow.ts"
+
+# Check toolHandlers map exists
+if ! grep -q "toolHandlers" "$WORKFLOW_FILE"; then
+    fail "toolHandlers registry not found in workflow.ts — replace the if/else block with a map"
+fi
+pass "toolHandlers registry found"
+
+# Check if/else chain is gone
+if grep -q "} else if" "$WORKFLOW_FILE"; then
+    fail "if/else chain still present in workflow.ts — replace it with the toolHandlers map lookup"
+fi
+pass "No if/else chain in workflow.ts"
+
+# Check single handler lookup pattern is present
+if ! grep -q "toolHandlers\[toolName\]" "$WORKFLOW_FILE"; then
+    fail "toolHandlers lookup not found — use: const handler = toolHandlers[toolName]"
+fi
+pass "toolHandlers lookup found"
+
+# Check at least one weatherAgentCleanWorkflow completed
+COMPLETED=$(temporal workflow list \
+    --address 127.0.0.1:7233 \
+    --query 'WorkflowType="weatherAgentCleanWorkflow" AND ExecutionStatus="Completed"' \
+    2>/dev/null | grep -c "Completed" || true)
+
+if [ "$COMPLETED" -lt 1 ]; then
+    fail "No completed weatherAgentCleanWorkflow found. Run the worker and starter, then try again."
+fi
+pass "At least one weatherAgentCleanWorkflow completed"
+
+echo "Exercise 3 complete."

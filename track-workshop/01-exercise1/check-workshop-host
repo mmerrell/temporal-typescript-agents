@@ -1,0 +1,43 @@
+#!/bin/bash
+fail() { echo "FAIL: $1"; exit 1; }
+pass() { echo "PASS: $1"; }
+
+WORKFLOW_FILE="/workspace/workshop/exercises/1_temporalize/exercise/workflow.ts"
+ACTIVITIES_FILE="/workspace/workshop/exercises/1_temporalize/exercise/activities.ts"
+
+# Check workflow file exists
+if [ ! -f "$WORKFLOW_FILE" ]; then
+    fail "exercise/workflow.ts not found"
+fi
+pass "workflow.ts found"
+
+# Check proxyActivities is used
+if ! grep -q "proxyActivities" "$WORKFLOW_FILE"; then
+    fail "proxyActivities not found in workflow.ts — make sure you're creating an activity proxy for callLLM"
+fi
+pass "proxyActivities found"
+
+# Check workflow function is exported
+if ! grep -q "export async function weatherAgentWorkflow" "$WORKFLOW_FILE"; then
+    fail "weatherAgentWorkflow not exported from workflow.ts"
+fi
+pass "weatherAgentWorkflow exported"
+
+# Check callLLM is implemented (not just throwing)
+if grep -q "throw new Error(\"Not implemented\")" "$ACTIVITIES_FILE"; then
+    fail "callLLM still throws 'Not implemented' — complete the implementation in activities.ts"
+fi
+pass "callLLM implemented"
+
+# Check that at least one weatherAgentWorkflow completed
+COMPLETED=$(temporal workflow list \
+    --address 127.0.0.1:7233 \
+    --query 'WorkflowType="weatherAgentWorkflow" AND ExecutionStatus="Completed"' \
+    2>/dev/null | grep -c "Completed" || true)
+
+if [ "$COMPLETED" -lt 1 ]; then
+    fail "No completed weatherAgentWorkflow found. Run the worker and starter, then try again."
+fi
+pass "At least one weatherAgentWorkflow completed"
+
+echo "Exercise 1 complete."

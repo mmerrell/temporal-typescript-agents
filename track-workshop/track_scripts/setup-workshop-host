@@ -1,0 +1,247 @@
+#!/bin/bash
+set -euxo pipefail
+
+# =============================================================================
+# Temporal TypeScript Agents — Hands-On Exercises Track
+# Track-level VM setup. Runs once when the track environment is created.
+# =============================================================================
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+wait_for_dpkg() {
+    systemctl disable unattended-upgrades 2>/dev/null || true
+    systemctl stop unattended-upgrades 2>/dev/null || true
+    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+        echo "Waiting for dpkg lock..."
+        sleep 5
+    done
+}
+
+# ─── System packages ──────────────────────────────────────────────────────────
+wait_for_dpkg
+apt-get update && apt-get install -y --no-install-recommends \
+    wget curl git vim nano unzip ca-certificates bash-completion \
+    python3 python3-pip build-essential
+
+# ─── Node.js 22 ───────────────────────────────────────────────────────────────
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+wait_for_dpkg
+apt-get install -y nodejs
+node --version
+npm --version
+
+# ─── Temporal CLI ─────────────────────────────────────────────────────────────
+curl -sSf https://temporal.download/cli.sh | sh
+ln -sf /root/.temporalio/bin/temporal /usr/local/bin/temporal
+temporal --version
+
+# ─── Temporal dev server (systemd) ────────────────────────────────────────────
+mkdir -p /workspace
+
+cat > /etc/systemd/system/temporal-server.service <<'EOF'
+[Unit]
+Description=Temporal Dev Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/temporal server start-dev \
+    --ui-port 8080 \
+    --ip 0.0.0.0 \
+    --db-filename /workspace/temporal.db
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/workspace/temporal.log
+StandardError=append:/workspace/temporal.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable temporal-server
+systemctl start temporal-server
+
+echo "Waiting for Temporal server..."
+for i in $(seq 1 30); do
+    if temporal operator cluster health --address 127.0.0.1:7233 2>/dev/null | grep -q SERVING; then
+        echo "Temporal server healthy."
+        break
+    fi
+    sleep 3
+done
+
+# ─── Workshop repo ────────────────────────────────────────────────────────────
+git clone --branch main \
+    https://github.com/mmerrell/temporal-typescript-agents.git \
+    /workspace/workshop
+
+# Pre-install npm dependencies for all four exercises
+for ex in 1_temporalize 2_tool_activities 3_clean_dispatch 4_hitl; do
+    echo "Installing deps for exercises/$ex..."
+    (cd "/workspace/workshop/exercises/$ex" && npm install --silent)
+done
+
+# ─── mitmproxy + network control panel ────────────────────────────────────────
+# --ignore-installed prevents conflicts with debian-managed packages (e.g. blinker)
+python3 -m pip install --break-system-packages --ignore-installed mitmproxy flask
+
+# Generate the mitmproxy CA cert
+mitmdump --listen-port 8889 --set block_global=false &
+MITM_PID=$!
+sleep 4
+kill $MITM_PID 2>/dev/null || true
+wait $MITM_PID 2>/dev/null || true
+
+MITM_CA="/root/.mitmproxy/mitmproxy-ca-cert.pem"
+
+# Install into system truststore
+cp "$MITM_CA" /usr/local/share/ca-certificates/mitmproxy-ca.crt
+update-ca-certificates
+
+# Copy proxy files from the cloned repo and rewrite paths to /workspace/proxy
+mkdir -p /workspace/proxy
+cp /workspace/workshop/proxy/toggle_addon.py /workspace/proxy/toggle_addon.py
+cp /workspace/workshop/proxy/controlpanel.py /workspace/proxy/controlpanel.py
+cp -r /workspace/workshop/proxy/static /workspace/proxy/static
+
+sed -i 's|/app/state.json|/workspace/proxy/state.json|g' /workspace/proxy/toggle_addon.py
+sed -i 's|/app/state.json|/workspace/proxy/state.json|g' /workspace/proxy/controlpanel.py
+sed -i 's|/app/static|/workspace/proxy/static|g' /workspace/proxy/controlpanel.py
+
+# Default state
+cat > /workspace/proxy/state.json <<'EOF'
+{
+  "kill_all": false,
+  "services": {
+    "anthropic": true,
+    "weather": true,
+    "geocoding": true
+  }
+}
+EOF
+
+# mitmproxy systemd service
+cat > /etc/systemd/system/workshop-proxy.service <<'EOF'
+[Unit]
+Description=Workshop Network Proxy (mitmproxy)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/mitmdump \
+    --listen-port 8888 \
+    --set block_global=false \
+    -s /workspace/proxy/toggle_addon.py
+Restart=on-failure
+RestartSec=3
+StandardOutput=append:/workspace/proxy/proxy.log
+StandardError=append:/workspace/proxy/proxy.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable workshop-proxy
+systemctl start workshop-proxy
+
+# Control panel systemd service
+cat > /etc/systemd/system/workshop-controlpanel.service <<'EOF'
+[Unit]
+Description=Workshop Network Control Panel
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /workspace/proxy/controlpanel.py
+Restart=on-failure
+RestartSec=3
+StandardOutput=append:/workspace/proxy/controlpanel.log
+StandardError=append:/workspace/proxy/controlpanel.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable workshop-controlpanel
+systemctl start workshop-controlpanel
+
+# ─── code-server (VS Code in browser) ─────────────────────────────────────────
+CODE_SERVER_VERSION="4.115.0"
+mkdir -p ~/.cache/code-server
+curl -fL "https://github.com/coder/code-server/releases/download/v${CODE_SERVER_VERSION}/code-server_${CODE_SERVER_VERSION}_amd64.deb" \
+    -o ~/.cache/code-server/code-server.deb
+wait_for_dpkg
+dpkg -i ~/.cache/code-server/code-server.deb
+
+code-server --install-extension ms-vscode.vscode-typescript-next
+
+mkdir -p /root/.local/share/code-server/User
+cat > /root/.local/share/code-server/User/settings.json <<'EOF'
+{
+    "workbench.colorTheme": "Default Dark+",
+    "workbench.startupEditor": "none",
+    "security.workspace.trust.enabled": false,
+    "editor.fontSize": 14,
+    "editor.tabSize": 2,
+    "editor.formatOnSave": true,
+    "workbench.activityBar.visible": false,
+    "workbench.statusBar.visible": true
+}
+EOF
+
+# code-server opens to the exercises root by default
+# Each challenge's VS Code tab will override the folder to the specific exercise
+cat > /etc/systemd/system/code-server.service <<'EOF'
+[Unit]
+Description=Code Server
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+ExecStart=/usr/bin/code-server --host 0.0.0.0 --port 8443 --cert --auth none /workspace/workshop/exercises
+StandardOutput=append:/workspace/code-server.log
+StandardError=append:/workspace/code-server.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable code-server
+systemctl start code-server
+
+# ─── Shell environment ─────────────────────────────────────────────────────────
+cat >> /root/.bashrc <<'EOF'
+
+export TEMPORAL_ADDRESS="127.0.0.1:7233"
+
+# Route all outbound HTTP/HTTPS through mitmproxy
+export HTTP_PROXY="http://127.0.0.1:8888"
+export HTTPS_PROXY="http://127.0.0.1:8888"
+export NO_PROXY="127.0.0.1,localhost"
+
+# Node.js does not use the system truststore — must be set explicitly
+export NODE_EXTRA_CA_CERTS="/root/.mitmproxy/mitmproxy-ca-cert.pem"
+
+# Suppress Node.js internal deprecation warnings (e.g. punycode)
+export NODE_OPTIONS="--no-deprecation"
+
+# ANTHROPIC_API_KEY must be set manually: export ANTHROPIC_API_KEY=sk-ant-...
+# Note: requires API credits from platform.anthropic.com — Claude.ai credits won't work
+
+export PATH="/workspace/workshop/exercises/1_temporalize/node_modules/.bin:$PATH"
+EOF
+
+# Apply env now for the remainder of setup
+export TEMPORAL_ADDRESS="127.0.0.1:7233"
+export HTTP_PROXY="http://127.0.0.1:8888"
+export HTTPS_PROXY="http://127.0.0.1:8888"
+export NO_PROXY="127.0.0.1,localhost"
+export NODE_EXTRA_CA_CERTS="/root/.mitmproxy/mitmproxy-ca-cert.pem"
+export NODE_OPTIONS="--no-deprecation"
+
+echo "Track setup complete."
