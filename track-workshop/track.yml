@@ -1,6 +1,8 @@
 slug: temporal-typescript-agents-workshop
-title: "Durable AI Agents with TypeScript and Temporal: Hands-On Exercises"
-teaser: Four exercises that progressively build a durable AI agent — from wrapping a raw loop in Temporal to human-in-the-loop with signals.
+id: wohsoqznkkfk
+title: 'Durable AI Agents with TypeScript and Temporal: Hands-On Exercises'
+teaser: Four exercises that progressively build a durable AI agent — from wrapping
+  a raw loop in Temporal to human-in-the-loop with signals.
 description: |-
   Build a durable AI agent step by step, in TypeScript.
 
@@ -27,4 +29,5 @@ lab_config:
   hideStopButton: false
   default_layout: AssignmentLeft
   default_layout_sidebar_size: 35
+checksum: "9667346234093461631"
 enhanced_loading: false

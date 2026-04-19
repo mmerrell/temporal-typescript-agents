@@ -1,9 +1,10 @@
 ---
 slug: exercise4
-id:
+id: mdthq3xgldsv
 type: challenge
-title: "Exercise 4: Human in the Loop"
-teaser: Add signal, query, and condition to durably suspend the workflow and wait for human input — then resume exactly where it left off.
+title: 'Exercise 4: Human in the Loop'
+teaser: Add signal, query, and condition to durably suspend the workflow and wait
+  for human input — then resume exactly where it left off.
 notes:
 - type: text
   contents: |-
@@ -25,25 +26,30 @@ notes:
     export ANTHROPIC_API_KEY=sk-ant-...
     ```
 tabs:
-- title: Terminal 1 - Worker
+- id: v2szekhfydkd
+  title: Terminal 1 - Worker
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/exercises/4_hitl
-- title: Terminal 2 - Starter
+- id: 3rr7ynw1ltez
+  title: Terminal 2 - Starter
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/exercises/4_hitl
-- title: VS Code
+- id: kattaaksmwet
+  title: VS Code
   type: service
   hostname: workshop-host
   path: ?folder=/workspace/workshop/exercises/4_hitl&openFile=/workspace/workshop/exercises/4_hitl/exercise/workflow.ts
   port: 8443
-- title: Temporal Web UI
+- id: w5uqtwk12ycb
+  title: Temporal Web UI
   type: service
   hostname: workshop-host
   path: /
   port: 8080
-- title: Network Control Panel
+- id: jhmx7t3dtq5v
+  title: Network Control Panel
   type: service
   hostname: workshop-host
   path: /

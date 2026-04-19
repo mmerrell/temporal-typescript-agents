@@ -1,9 +1,10 @@
 ---
 slug: exercise2
-id:
+id: t6x0omxa2j8s
 type: challenge
-title: "Exercise 2: Tool Activities"
-teaser: Extract the tool calls out of the workflow and into proper Temporal activities — making every step visible, retryable, and timeout-protected.
+title: 'Exercise 2: Tool Activities'
+teaser: Extract the tool calls out of the workflow and into proper Temporal activities
+  — making every step visible, retryable, and timeout-protected.
 notes:
 - type: text
   contents: |-
@@ -13,25 +14,30 @@ notes:
 
     When you're done, compare the event history to Exercise 1. Every tool call now has its own `ActivityTaskScheduled` event — scheduled, started, completed, with retry tracking.
 tabs:
-- title: Terminal 1 - Worker
+- id: jn4m4uqdj3of
+  title: Terminal 1 - Worker
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/exercises/2_tool_activities
-- title: Terminal 2 - Starter
+- id: xhqpwpnwpjyp
+  title: Terminal 2 - Starter
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/exercises/2_tool_activities
-- title: VS Code
+- id: gadsrtxejmwd
+  title: VS Code
   type: service
   hostname: workshop-host
   path: ?folder=/workspace/workshop/exercises/2_tool_activities&openFile=/workspace/workshop/exercises/2_tool_activities/exercise/activities.ts
   port: 8443
-- title: Temporal Web UI
+- id: q7e1f5rlpste
+  title: Temporal Web UI
   type: service
   hostname: workshop-host
   path: /
   port: 8080
-- title: Network Control Panel
+- id: 2w0grbty6j7k
+  title: Network Control Panel
   type: service
   hostname: workshop-host
   path: /

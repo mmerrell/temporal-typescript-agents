@@ -1,9 +1,10 @@
 ---
 slug: exercise3
-id:
+id: gk2j8djyldij
 type: challenge
-title: "Exercise 3: Clean Tool Dispatch"
-teaser: Replace the if/else dispatch chain with a tool registry map — adding a new tool becomes one line, and the loop stays unchanged.
+title: 'Exercise 3: Clean Tool Dispatch'
+teaser: Replace the if/else dispatch chain with a tool registry map — adding a new
+  tool becomes one line, and the loop stays unchanged.
 notes:
 - type: text
   contents: |-
@@ -15,25 +16,30 @@ notes:
 
     Pay attention to how this sets up Exercise 4: adding `ask_user` for human-in-the-loop will be exactly one more entry in the map.
 tabs:
-- title: Terminal 1 - Worker
+- id: mb13zj8xx0in
+  title: Terminal 1 - Worker
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/exercises/3_clean_dispatch
-- title: Terminal 2 - Starter
+- id: hhznqqfppxgo
+  title: Terminal 2 - Starter
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/exercises/3_clean_dispatch
-- title: VS Code
+- id: ylt4mmmegde5
+  title: VS Code
   type: service
   hostname: workshop-host
   path: ?folder=/workspace/workshop/exercises/3_clean_dispatch&openFile=/workspace/workshop/exercises/3_clean_dispatch/exercise/workflow.ts
   port: 8443
-- title: Temporal Web UI
+- id: z6obxqtehgab
+  title: Temporal Web UI
   type: service
   hostname: workshop-host
   path: /
   port: 8080
-- title: Network Control Panel
+- id: 4lhiyqu29qwn
+  title: Network Control Panel
   type: service
   hostname: workshop-host
   path: /

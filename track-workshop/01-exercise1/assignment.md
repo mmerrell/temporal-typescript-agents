@@ -1,9 +1,10 @@
 ---
 slug: exercise1
-id:
+id: 9xrpbihljwna
 type: challenge
-title: "Exercise 1: Temporalize the Loop"
-teaser: Take a working raw agentic loop and wrap it in a Temporal workflow — making the LLM call a durable activity.
+title: 'Exercise 1: Temporalize the Loop'
+teaser: Take a working raw agentic loop and wrap it in a Temporal workflow — making
+  the LLM call a durable activity.
 notes:
 - type: text
   contents: |-
@@ -24,25 +25,30 @@ notes:
 
     **Note:** Requires API credits from platform.anthropic.com — Claude.ai subscription credits won't work here.
 tabs:
-- title: Terminal 1 - Worker
+- id: ehq0ifrjnfrz
+  title: Terminal 1 - Worker
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/exercises/1_temporalize
-- title: Terminal 2 - Starter
+- id: gxckhjllmlut
+  title: Terminal 2 - Starter
   type: terminal
   hostname: workshop-host
   workdir: /workspace/workshop/exercises/1_temporalize
-- title: VS Code
+- id: 5udaxzwwmoae
+  title: VS Code
   type: service
   hostname: workshop-host
   path: ?folder=/workspace/workshop/exercises/1_temporalize&openFile=/workspace/workshop/exercises/1_temporalize/exercise/workflow.ts
   port: 8443
-- title: Temporal Web UI
+- id: kuwjcyuuxwmk
+  title: Temporal Web UI
   type: service
   hostname: workshop-host
   path: /
   port: 8080
-- title: Network Control Panel
+- id: gfo1mtdbwtqx
+  title: Network Control Panel
   type: service
   hostname: workshop-host
   path: /
