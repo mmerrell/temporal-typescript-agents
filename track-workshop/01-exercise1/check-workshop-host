@@ -3,17 +3,10 @@ fail() { echo "FAIL: $1"; exit 1; }
 pass() { echo "PASS: $1"; }
 
 WORKFLOW_FILE="/workspace/workshop/exercises/1_temporalize/exercise/workflow.ts"
-ACTIVITIES_FILE="/workspace/workshop/exercises/1_temporalize/exercise/activities.ts"
-
-# Check workflow file exists
-if [ ! -f "$WORKFLOW_FILE" ]; then
-    fail "exercise/workflow.ts not found"
-fi
-pass "workflow.ts found"
 
 # Check proxyActivities is used
 if ! grep -q "proxyActivities" "$WORKFLOW_FILE"; then
-    fail "proxyActivities not found in workflow.ts — make sure you're creating an activity proxy for callLLM"
+    fail "proxyActivities not found in workflow.ts — create activity proxies for callLLM and the tool activities"
 fi
 pass "proxyActivities found"
 
@@ -23,13 +16,19 @@ if ! grep -q "export async function weatherAgentWorkflow" "$WORKFLOW_FILE"; then
 fi
 pass "weatherAgentWorkflow exported"
 
-# Check callLLM is implemented (not just throwing)
-if grep -q "throw new Error(\"Not implemented\")" "$ACTIVITIES_FILE"; then
-    fail "callLLM still throws 'Not implemented' — complete the implementation in activities.ts"
+# Check no I/O imports in workflow (the key correctness rule)
+if grep -qE "^import.*(node-fetch|https-proxy-agent|HttpsProxyAgent|nodeFetch)" "$WORKFLOW_FILE"; then
+    fail "workflow.ts imports I/O libraries — these belong in activities.ts only, never in workflow files"
 fi
-pass "callLLM implemented"
+pass "No I/O imports in workflow.ts"
 
-# Check that at least one weatherAgentWorkflow completed
+# Check the TODO placeholders are gone
+if grep -q "TODO: call" "$WORKFLOW_FILE"; then
+    fail "TODO placeholders still present in workflow.ts — replace them with actual activity calls"
+fi
+pass "No TODO placeholders remaining"
+
+# Check at least one weatherAgentWorkflow completed
 COMPLETED=$(temporal workflow list \
     --address 127.0.0.1:7233 \
     --query 'WorkflowType="weatherAgentWorkflow" AND ExecutionStatus="Completed"' \

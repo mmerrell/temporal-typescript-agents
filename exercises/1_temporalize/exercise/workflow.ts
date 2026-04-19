@@ -3,111 +3,67 @@
  *
  * TODO: Convert the raw agentic loop into a Temporal workflow.
  *
- * The inline tool implementations below are already complete — don't touch them.
- * Your job is to write the workflow function that wraps the agentic loop.
+ * All four activities are already implemented in activities.ts — you don't
+ * need to touch that file. Your job is entirely here in workflow.ts.
  *
  * Steps:
  *   1. Import proxyActivities from "@temporalio/workflow"
  *   2. Import type * as acts from "./activities"
- *   3. Create TWO activity proxies:
- *      - callLLM with startToCloseTimeout: "60 seconds"
- *      - (tool activities come in Exercise 2 — keep tool calls inline for now)
- *   4. Export an async function weatherAgentWorkflow(query: string): Promise<string>
- *      that runs the agentic loop using callLLM as an activity, and calls
- *      the inline tool functions directly for tool execution.
+ *   3. Create a proxy for callLLM with startToCloseTimeout: "60 seconds"
+ *   4. Create a proxy for getWeatherAlerts, getCoordinates, getDistanceKm
+ *      with startToCloseTimeout: "30 seconds"
+ *   5. Export async function weatherAgentWorkflow(query: string): Promise<string>
+ *      that runs the agentic loop — calling activities via the proxies,
+ *      never calling them directly
  *
- * The loop structure is identical to demo1-raw.ts — the only difference is
- * that callLLM is now called via proxyActivities instead of directly.
+ * The loop structure is identical to demo1-raw.ts. The only difference is
+ * that every function call goes through proxyActivities instead of running
+ * inline. This is what makes the workflow durable — Temporal records each
+ * activity call in the event history and can replay from any point.
  */
 
 import { proxyActivities } from "@temporalio/workflow";
 import type * as acts from "./activities";
-import Anthropic from "@anthropic-ai/sdk";
-import nodeFetch from "node-fetch";
-import { HttpsProxyAgent } from "https-proxy-agent";
-import { TOOLS } from "../tools";
 
-// ── Inline tool implementations ───────────────────────────────────────────────
-// These run inside the workflow directly. Exercise 2 moves them to activities.
+// TODO: Create proxy for callLLM
+// const { callLLM } = proxyActivities<typeof acts>({ startToCloseTimeout: "60 seconds" });
 
-const proxyUrl = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
-const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
-
-function nativeFetchOpts() {
-  return proxyAgent ? { agent: proxyAgent } : {};
-}
-
-async function getWeatherAlerts(state: string): Promise<string> {
-  const url = `https://api.weather.gov/alerts/active?area=${state.toUpperCase()}`;
-  const resp = await nodeFetch(url, {
-    ...nativeFetchOpts(),
-    headers: { "User-Agent": "temporal-typescript-agents" },
-  } as Parameters<typeof nodeFetch>[1]);
-  if (!resp.ok) throw new Error(`NWS error: ${resp.status}`);
-  const data = (await resp.json()) as {
-    features: Array<{ properties: { event?: string; headline?: string } }>;
-  };
-  const alerts = data.features ?? [];
-  if (alerts.length === 0) return `No active weather alerts for ${state}.`;
-  return alerts
-    .slice(0, 5)
-    .map((a) => `- ${a.properties.event ?? "Alert"}: ${a.properties.headline ?? ""}`)
-    .join("\n");
-}
-
-async function getCoordinates(location: string): Promise<{ lat: number; lon: number }> {
-  const url = new URL("https://nominatim.openstreetmap.org/search");
-  url.searchParams.set("q", location);
-  url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "1");
-  const resp = await nodeFetch(url.toString(), {
-    ...nativeFetchOpts(),
-    headers: { "User-Agent": "temporal-typescript-agents" },
-  } as Parameters<typeof nodeFetch>[1]);
-  if (!resp.ok) throw new Error(`Nominatim error: ${resp.status}`);
-  const results = (await resp.json()) as Array<{ lat: string; lon: string }>;
-  if (results.length === 0) throw new Error(`Not found: ${location}`);
-  return { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon) };
-}
-
-function getDistanceKm(
-  lat1: number, lon1: number, lat2: number, lon2: number
-): { distanceKm: number; distanceMiles: number } {
-  const R = 6371.0;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  const d = 2 * R * Math.asin(Math.sqrt(a));
-  return {
-    distanceKm: Math.round(d * 100) / 100,
-    distanceMiles: Math.round(d * 0.621371 * 100) / 100,
-  };
-}
-
-async function runTool(name: string, input: Record<string, unknown>): Promise<string> {
-  if (name === "get_weather_alerts") return getWeatherAlerts(input.state as string);
-  if (name === "get_coordinates") return JSON.stringify(await getCoordinates(input.location as string));
-  if (name === "get_distance_km") return JSON.stringify(getDistanceKm(input.lat1 as number, input.lon1 as number, input.lat2 as number, input.lon2 as number));
-  return `Unknown tool: ${name}`;
-}
-
-// ── TODO: Create activity proxy for callLLM ───────────────────────────────────
-//
-// const { callLLM } = proxyActivities<typeof acts>({
-//   startToCloseTimeout: "...",
+// TODO: Create proxy for tool activities
+// const { getWeatherAlerts, getCoordinates, getDistanceKm } = proxyActivities<typeof acts>({
+//   startToCloseTimeout: "30 seconds",
 // });
 
-// ── TODO: Export weatherAgentWorkflow ─────────────────────────────────────────
-//
+// TODO: Export weatherAgentWorkflow
 // export async function weatherAgentWorkflow(query: string): Promise<string> {
 //   const messages = [{ role: "user", content: query }];
-//
 //   while (true) {
-//     // Call callLLM as an activity (not directly)
-//     // Handle end_turn and tool_use stop reasons
-//     // For tool_use, call runTool inline (not as activities yet)
+//     const { content, stopReason } = await callLLM(messages as Parameters<typeof acts.callLLM>[0]);
+//     messages.push({ role: "assistant", content });
+//     if (stopReason === "end_turn") {
+//       for (const block of content) {
+//         if (block.type === "text") return block.text;
+//       }
+//       return "No response.";
+//     }
+//     if (stopReason === "tool_use") {
+//       const toolResults: Array<{ type: "tool_result"; tool_use_id: string; content: string }> = [];
+//       for (const block of content) {
+//         if (block.type !== "tool_use") continue;
+//         const { id: toolUseId, name: toolName, input: toolInput } = block;
+//         const inp = toolInput as Record<string, unknown>;
+//         let result: string;
+//         if (toolName === "get_weather_alerts") {
+//           result = await getWeatherAlerts(inp.state as string);
+//         } else if (toolName === "get_coordinates") {
+//           result = JSON.stringify(await getCoordinates(inp.location as string));
+//         } else if (toolName === "get_distance_km") {
+//           result = JSON.stringify(await getDistanceKm(inp.lat1 as number, inp.lon1 as number, inp.lat2 as number, inp.lon2 as number));
+//         } else {
+//           result = `Unknown tool: ${toolName}`;
+//         }
+//         toolResults.push({ type: "tool_result", tool_use_id: toolUseId, content: result });
+//       }
+//       messages.push({ role: "user", content: toolResults });
+//     }
 //   }
 // }

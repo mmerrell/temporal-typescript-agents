@@ -5,32 +5,31 @@ pass() { echo "PASS: $1"; }
 ACTIVITIES_FILE="/workspace/workshop/exercises/2_tool_activities/exercise/activities.ts"
 WORKFLOW_FILE="/workspace/workshop/exercises/2_tool_activities/exercise/workflow.ts"
 
-# Check tool activities are implemented
-for fn in getWeatherAlerts getCoordinates getDistanceKm; do
-    if grep -q "throw new Error(\"Not implemented\")" "$ACTIVITIES_FILE"; then
-        fail "At least one tool activity still throws 'Not implemented' — check activities.ts"
-    fi
-done
+# Check tool activities are implemented (not stubs)
+if grep -q "throw new Error(\"Not implemented\")" "$ACTIVITIES_FILE"; then
+    fail "At least one tool activity still throws 'Not implemented' — complete the implementation in activities.ts"
+fi
 pass "Tool activities implemented"
 
-# Check proxyActivities includes tool activities
-if ! grep -q "getWeatherAlerts" "$WORKFLOW_FILE"; then
-    fail "getWeatherAlerts not wired up in workflow.ts — add it to proxyActivities"
+# Check tool activities are proxied in workflow
+if ! grep -q "getWeatherAlerts" "$WORKFLOW_FILE" || grep -q "TODO: Add tool" "$WORKFLOW_FILE"; then
+    fail "Tool activities not proxied in workflow.ts — add them to proxyActivities"
 fi
-pass "getWeatherAlerts proxied in workflow"
+pass "Tool activities proxied in workflow"
 
-if ! grep -q "getCoordinates" "$WORKFLOW_FILE"; then
-    fail "getCoordinates not wired up in workflow.ts"
+# Check TODO placeholders are gone from workflow
+if grep -q "TODO: call" "$WORKFLOW_FILE"; then
+    fail "TODO placeholders still present in workflow.ts — replace them with actual activity calls"
 fi
-pass "getCoordinates proxied in workflow"
+pass "No TODO placeholders remaining in workflow.ts"
 
-# Check throw stubs are removed
-if grep -q "not wired up yet" "$WORKFLOW_FILE"; then
-    fail "Stub errors still present in workflow.ts — replace the throw lines with activity calls"
+# Check no I/O imports in workflow
+if grep -qE "^import.*(node-fetch|https-proxy-agent|HttpsProxyAgent|nodeFetch)" "$WORKFLOW_FILE"; then
+    fail "workflow.ts imports I/O libraries — these belong in activities.ts only"
 fi
-pass "No stub errors remaining in workflow.ts"
+pass "No I/O imports in workflow.ts"
 
-# Check at least one workflow completed
+# Check at least one weatherAgentWorkflow completed
 COMPLETED=$(temporal workflow list \
     --address 127.0.0.1:7233 \
     --query 'WorkflowType="weatherAgentWorkflow" AND ExecutionStatus="Completed"' \
