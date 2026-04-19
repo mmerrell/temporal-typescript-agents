@@ -9,3 +9,4 @@ proxy/state.json
 *.p12
 
 .DS_Store
+*.remote
